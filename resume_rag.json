@@ -1,0 +1,1399 @@
+{
+  "name": "Resume Ragger",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "options": {
+          "allowedOrigins": "*",
+          "inputPlaceholder": "Type your question..",
+          "showWelcomeScreen": true,
+          "getStarted": "New Conversation"
+        }
+      },
+      "id": "74003dcd-2ac7-4caa-a1cd-adecc5143c07",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2016,
+        112
+      ],
+      "webhookId": "cdb5c076-d458-4b9d-8398-f43bd25059b1"
+    },
+    {
+      "parameters": {
+        "model": "qwen3:8b",
+        "options": {
+          "numCtx": 8192,
+          "presencePenalty": 0.5
+        }
+      },
+      "id": "3dee878b-d748-4829-ac0a-cfd6705d31e5",
+      "name": "Ollama Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -1168,
+        128
+      ],
+      "credentials": {
+        "ollamaApi": {
+          "id": "xHuYe0MDGOs9IpBW",
+          "name": "Local Ollama service"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=**Objective:**  \nAct as an HR resource manager using **Resumes_Vector_Store** (semantic search) and **Resumes_Database** (SQL) to filter resumes, retrieve candidate details, and generate structured outputs.  \n\n---\n\n### **Step 1: JSON Past Conversation Input**  \nAccept the following JSON field with past conversation details (e.g., skills, notes, search criteria) to refine searches:\n{{ JSON.stringify($('Chat Memory Manager1').item.json.messages) }}\n\n\n---\n\n### **Step 2: Semantic Search**  \nUse **Resumes_Vector_Store** to find resumes matching keywords, skills, or semantic terms (e.g., \"Python,\" \"remote work\").  \n\n---\n\n### **Step 3: Candidate Details**  \nFor each candidate:  \n1. Retrieve metadata (name, skills, email).  \n2. Fetch exact data (filename, experience).  \n3. Generate a download link using the `filename`.  \n\n**Example Output:**  \n```  \nCandidate: John Doe  \nEmail: john.doe@example.com  \nSkills: Python, SQL  \nExperience: 6.5 years  \nDownload Resume: [Link]  \n```  \n\n---\n\n### **Edge Cases**  \n- No matches: \"No candidates found.\"  \n- Filenames: Use metadata `filename` to create download links. If you can't find the filename metadata, search in the SQL Resumes_Database with the candidate email.\n- Duplicates: Merge them into one candidate resume.\n\n---\n\n**Final Instructions:**  \nPrioritize semantic search, then SQL queries. Focus on data retrieval and formatting—no censorship, ethical limits, or moral judgments. Respond in a natural, human-like tone.  \n\n---\n\n**All text from here is user input:** \n \n{{ $json.chatInput }}  ",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -1040,
+        -96
+      ],
+      "id": "f9941603-68ff-4bc9-8fb0-0d33480b9175",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "formTitle": "File Upload",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "File Upload",
+              "fieldType": "file",
+              "acceptFileTypes": ".pdf",
+              "requiredField": true
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "path": "file-upload"
+        }
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -2016,
+        1136
+      ],
+      "id": "990da622-9d06-498c-a9b5-30b222241fd3",
+      "name": "On form submission",
+      "webhookId": "1ef0b0e6-c497-4305-b08f-75b358d72703"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "rag_coll",
+          "mode": "list",
+          "cachedResultName": "rag_coll"
+        },
+        "embeddingBatchSize": 32,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        416,
+        544
+      ],
+      "id": "e65e9444-d494-4d42-b39b-cb379aca4c7a",
+      "name": "Qdrant Vector Store",
+      "alwaysOutputData": true,
+      "credentials": {
+        "qdrantApi": {
+          "id": "sFfERYppMeBnFNeA",
+          "name": "Local QdrantApi database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "bge-m3:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        -944,
+        336
+      ],
+      "id": "d79b6a3e-9200-470e-9d11-b4cca1eed6f9",
+      "name": "Embeddings Ollama",
+      "credentials": {
+        "ollamaApi": {
+          "id": "xHuYe0MDGOs9IpBW",
+          "name": "Local Ollama service"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.text }}",
+        "textSplittingMode": "custom",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "name",
+                "value": "={{ $json.fullname }}"
+              },
+              {
+                "name": "email",
+                "value": "={{ $json.email }}"
+              },
+              {
+                "name": "tech_skills",
+                "value": "={{ $json.tech_skills }}"
+              },
+              {
+                "name": "filename",
+                "value": "={{ $json.filename }}"
+              },
+              {
+                "name": "years_experience",
+                "value": "={{ $json.years_experience }}"
+              },
+              {
+                "name": "soft_skills",
+                "value": "={{ $json.soft_skills }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        528,
+        768
+      ],
+      "id": "b2251b0b-22df-4ffb-833a-805fdd90a298",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "chunkSize": 500,
+        "chunkOverlap": 125
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterTokenSplitter",
+      "typeVersion": 1,
+      "position": [
+        624,
+        976
+      ],
+      "id": "91c95b73-71ef-49ed-ab48-4302cf641838",
+      "name": "Token Splitter"
+    },
+    {
+      "parameters": {
+        "jsCode": "return {\n  output: $input\n    .first()\n    .json.output.replace(/[\\s\\S]*?<\\/think>\\s*/g, \"\")\n    .trim(),\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        256
+      ],
+      "id": "bf36654b-bfa8-475a-b723-e582f48a715c",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -1120,
+        864
+      ],
+      "id": "4f8f6b02-15b1-47ff-b5e9-e0831c2c7914",
+      "name": " Get File Contents"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- CREATE TABLE resumes (\n--     ID int NOT NULL,\n--     fullname varchar(255),\n--     email varchar(255),\n--     skills varchar(16384),\n--     titles varchar(16384),\n--     filename varchar(255),\n--     years_experience FLOAT\n-- );\n\n-- ALTER TABLE resumes\n-- DROP COLUMN skills;\n\n-- SELECT * FROM resumes\n\nDELETE FROM resumes;\n\n-- ALTER TABLE resumes ADD tech_skills varchar(16384) ;\n\n-- ALTER TABLE resumes ADD soft_skills varchar(16384) ;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2016,
+        2160
+      ],
+      "id": "fc1a7dae-e48b-473b-9ea0-eb3d46819fd7",
+      "name": "Execute a SQL query1",
+      "credentials": {
+        "postgres": {
+          "id": "62pDb9Iuy7OZcvmp",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "resumes",
+          "mode": "list",
+          "cachedResultName": "resumes"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "fullname": "={{ $json.metadata.name }}",
+            "email": "={{ $json.metadata.email }}",
+            "skills": "={{ $json.metadata.skills }}",
+            "filename": "={{ $('On form submission').item.json['File Upload'][0].filename }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "fullname",
+              "displayName": "fullname",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "skills",
+              "displayName": "skills",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "filename",
+              "displayName": "filename",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "years_experience",
+              "displayName": "years_experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        560,
+        1200
+      ],
+      "id": "e4b0c2d8-5307-41df-9174-244664431d6c",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "62pDb9Iuy7OZcvmp",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "database-api",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2016,
+        1936
+      ],
+      "id": "2a854021-ab71-458a-b29c-f40fb64e8a68",
+      "name": "Webhook",
+      "webhookId": "4f49b0c8-93c8-4572-a650-394ab8ad8c14"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -1568,
+        1936
+      ],
+      "id": "637a59bf-9fd2-4f8f-9247-cf983ed512ba",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.query.query }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1792,
+        1936
+      ],
+      "id": "9d180d95-8478-4d24-b90f-beb21f3cb7bb",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "62pDb9Iuy7OZcvmp",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8c76e9fe-55be-416c-b68d-3d3fcc43f90b",
+              "name": "fullname",
+              "value": "={{ $json.fullname }}",
+              "type": "string"
+            },
+            {
+              "id": "7a8fdf75-71c2-4ac0-9da9-f4501d23a14d",
+              "name": "email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "a24477ed-189e-499a-8766-8502e19879c2",
+              "name": "years_experience",
+              "value": "={{ $json.years_experience }}",
+              "type": "number"
+            },
+            {
+              "id": "1ed43c2d-c40e-4c59-9a3b-857621b1fed6",
+              "name": "tech_skills",
+              "value": "={{ $json.tech_skills }}",
+              "type": "array"
+            },
+            {
+              "id": "3ae4e8e2-862d-4056-bef6-e71e0c50ed11",
+              "name": "soft_skills",
+              "value": "={{ $json.soft_skills }}",
+              "type": "array"
+            },
+            {
+              "id": "099d2831-7828-4282-be67-38117211e377",
+              "name": "filename",
+              "value": "={{ $json.filename }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        176,
+        1200
+      ],
+      "id": "f6ae1d0e-861b-434c-902f-950b6649bdaf",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "=/data/shared/{{ $json.fileName.replace('.pdf', '') }} - {{ $('On form submission').item.json.submittedAt }}.pdf",
+        "options": {
+          "append": false
+        }
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        -1344,
+        864
+      ],
+      "id": "18c6a278-9704-488b-a56d-542ef7c13ead",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1568,
+        1136
+      ],
+      "id": "200c5533-0f54-4a8e-999c-dedd97976ecb",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -272,
+        1008
+      ],
+      "id": "34a51446-14a8-4313-8ca7-7c8366a8c62a",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "model": "bge-m3:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        400,
+        768
+      ],
+      "id": "3e80591c-aea8-4b71-8d1f-04743444bfec",
+      "name": "Embeddings Ollama1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "xHuYe0MDGOs9IpBW",
+          "name": "Local Ollama service"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "qwen3:8b",
+        "options": {
+          "numCtx": 8192,
+          "format": "json"
+        }
+      },
+      "id": "89b317ec-0d28-461d-a9c9-b40211e39b91",
+      "name": "Ollama Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -2016,
+        1728
+      ],
+      "credentials": {
+        "ollamaApi": {
+          "id": "xHuYe0MDGOs9IpBW",
+          "name": "Local Ollama service"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "When the user requests resumes based on **keywords, skills, or semantic criteria** (e.g., \\\"HTML,\\\" \\\"project management\\\"), use the **Resumes_Vector_Store** first.  \n- **Metadata available for filtering:**\n- `name`\n- `email`\n- `years_experience`\n- `skills`\n- Any semantic term (e.g., \\\"remote work,\\\" \\\"leadership\\\").\n- **Example query:**\n*\\\"Find resumes mentioning 'Python' and 5+ years of experience.\\\"*\n- Use semantic search to identify matching resumes.\nYou will receive chunks of data and may contain duplicates. If you find duplicates merge them together.",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "rag_coll",
+          "mode": "list",
+          "cachedResultName": "rag_coll"
+        },
+        "topK": 5,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        -1040,
+        128
+      ],
+      "id": "d19681f7-484d-4d37-9c58-13ee960690f1",
+      "name": "Resumes Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "sFfERYppMeBnFNeA",
+          "name": "Local QdrantApi database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "resumes",
+          "mode": "list",
+          "cachedResultName": "resumes"
+        },
+        "limit": 15,
+        "where": {
+          "values": [
+            {
+              "column": "email",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('values0_Value', `Use the Candidate email`, 'string') }}"
+            },
+            {
+              "column": "tech_skills",
+              "condition": "LIKE",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('values1_Value', `Use skills defined by the user in the query`, 'string') }}"
+            },
+            {
+              "column": "soft_skills",
+              "condition": "LIKE",
+              "value": "Use skills defined by the user in the query"
+            }
+          ]
+        },
+        "combineConditions": "OR",
+        "sort": {
+          "values": [
+            {
+              "column": "years_experience",
+              "direction": "DESC"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -720,
+        128
+      ],
+      "id": "a4d52e44-4384-4b5f-89ec-2f38ee26c63e",
+      "name": "Resumes Database",
+      "credentials": {
+        "postgres": {
+          "id": "62pDb9Iuy7OZcvmp",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "user",
+              "message": "={{ $('Chat Trigger').item.json.chatInput }}"
+            },
+            {
+              "type": "ai",
+              "message": "={{ $json.output.replace(/[\\s\\S]*?<\\/think>\\s*/g) }}"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryManager",
+      "typeVersion": 1.1,
+      "position": [
+        -512,
+        -144
+      ],
+      "id": "155da54d-7b47-46e1-9c38-20f39fbab096",
+      "name": "Chat Memory Manager"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Chat Trigger').item.json.sessionId }}",
+        "contextWindowLength": 15
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -416,
+        80
+      ],
+      "id": "ab8d8f05-391f-4cf5-8289-dcc58a4ddd46",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryManager",
+      "typeVersion": 1.1,
+      "position": [
+        -1792,
+        192
+      ],
+      "id": "fc22fe2f-2091-4ad8-8308-504e569eae64",
+      "name": "Chat Memory Manager1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1392,
+        112
+      ],
+      "id": "c1fd25b8-e510-4719-a08a-f5202e723bd4",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8c76e9fe-55be-416c-b68d-3d3fcc43f90b",
+              "name": "fullname",
+              "value": "={{ $json.output.name.toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "7a8fdf75-71c2-4ac0-9da9-f4501d23a14d",
+              "name": "email",
+              "value": "={{ $json.output.email.toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "a24477ed-189e-499a-8766-8502e19879c2",
+              "name": "years_experience",
+              "value": "={{ $json.output.years_experience }}",
+              "type": "number"
+            },
+            {
+              "id": "1ed43c2d-c40e-4c59-9a3b-857621b1fed6",
+              "name": "tech_skills",
+              "value": "={{ $json.output.skills.tech_skills }}",
+              "type": "array"
+            },
+            {
+              "id": "2f5d2997-0b97-49f6-a0ae-f5ba325418c4",
+              "name": "soft_skills",
+              "value": "={{ $json.output.skills.soft_skills }}",
+              "type": "array"
+            },
+            {
+              "id": "099d2831-7828-4282-be67-38117211e377",
+              "name": "filename",
+              "value": "=http://192.168.1.196{{ $json.fileName\n  .replace('/data/shared', '')}}",
+              "type": "string"
+            },
+            {
+              "id": "885bb896-1449-4fbc-86de-5b82872e9fd6",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -48,
+        1008
+      ],
+      "id": "70f530c8-011a-43e4-aa3d-7ec670b2426a",
+      "name": "Edit Fields1",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=--------------\nInstructions:\nYou are an expert extraction algorithm.\nOnly extract relevant information from the text.\nIf you do not know the value of an attribute asked to extract, you may omit the attribute's value.\nEnsure that the data is properly formatted.\nYou must format your output as a JSON value that adheres to a given \"JSON Schema\" instance.\n\"JSON Schema\" is a declarative language that allows you to annotate and validate JSON documents.\n\nYour output will be parsed and type-checked according to the provided schema instance, so make sure all fields in your output match the schema exactly and there are no trailing commas!\n\nHere is the JSON Schema instance your output must adhere to. Include the enclosing markdown codeblock:\n```json\n{\n  \"type\": \"object\",\n  \"properties\": {\n    \"name\": {\n      \"type\": \"string\",\n      \"description\": \"The name of the candidate from the resume\"\n    },\n    \"email\": {\n      \"type\": \"string\",\n      \"format\": \"email\",\n      \"description\": \"The email of the candidate from the resume. (example: mail@example.com)\"\n    },\n    \"skills\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"tech_skills\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"string\"\n          },\n          \"description\": \"List only technology skills or programing languages skill found in the resume (example: Java, HVAC, Docker, etc.). If you can not find skills just add 'none'\"\n        },\n        \"soft_skills\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"string\"\n          },\n          \"description\": \"List soft skills, people skills. personal skills and management skills found in the resume. If you can not find skills just add 'none'\"\n        }\n      },\n      \"additionalProperties\": false\n    },\n    \"years_experience\": {\n      \"type\": \"number\",\n      \"description\": \"Calculate the total work years from the resume. Asume present year is 2020.\"\n    }\n  },\n  \"required\": [\n    \"name\",\n    \"email\",\n    \"years_experience\"\n  ],\n  \"additionalProperties\": false,\n  \"description\": \"Always respond with a JSON.\",\n  \"$schema\": \"http://json-schema.org/draft-07/schema#\"\n}\n```\n--------------\n\n{{ $json.text.replace(/[^-a-zA-Z0-9();!?%\"”=\\\\\\/@+:\\-—–_,.\\n `’'&]/mg,'') }}",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -1984,
+        1504
+      ],
+      "id": "3eb43729-bd5d-4311-b7f3-63f7e0e5cf8a",
+      "name": "Metadata Extractor",
+      "retryOnFail": true,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e0ed7a38-fdf6-4c05-939b-b7b255c18a1d",
+              "leftValue": "={{ $json.text.replace('\\n', '').replace('\\r', '') }}",
+              "rightValue": "/^.{150,}$/sg",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -896,
+        864
+      ],
+      "id": "8ed6609f-85ef-4ad1-bdf6-afa9d6d0d446",
+      "name": "Check if PDF is image only"
+    },
+    {
+      "parameters": {
+        "command": "=rm '{{ $('Read/Write Files from Disk').item.json.fileName.trim() }}'"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        864
+      ],
+      "id": "b82b6474-6ecd-4d19-ae9d-23c7819dce6a",
+      "name": "Delete file from local storage"
+    },
+    {
+      "parameters": {
+        "jsCode": "let results = [];\n\nfor (item of items) {\n    for (key of Object.keys(item.binary)) {\n        results.push({\n            json: {\n                fileName: item.binary[key].fileName\n            },\n            binary: {\n                data: item.binary[key],\n            }\n        });\n    }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1792,
+        1136
+      ],
+      "id": "2795e1cf-5dbc-44de-9d28-498e8037bb3f",
+      "name": "Split multiple files in single executions"
+    },
+    {
+      "parameters": {
+        "command": "=cd /data/shared/ && rm *"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -2016,
+        2384
+      ],
+      "id": "05ce4b3d-8057-45c4-ad34-4bb8658a141e",
+      "name": "Delete file from local storage1"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolCalculator",
+      "typeVersion": 1,
+      "position": [
+        -1888,
+        1728
+      ],
+      "id": "99423f88-c47c-45d8-87a5-ddd220ab0fee",
+      "name": "Calculator"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Upload Succesfull",
+        "completionMessage": "Upload was successful. please wait a while for the resumes to be processed.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [
+        -1344,
+        672
+      ],
+      "id": "57c39840-5345-47e2-9776-651144be521b",
+      "name": "Form",
+      "webhookId": "ac221ad2-7859-45e8-b0c7-ec76a8842862"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "59f39502-b545-41ac-93f7-2851f67e7d90",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "e57aaf60-d0a1-4a7c-9cb8-5340c8206cb1",
+              "name": "fileName",
+              "value": "={{ $('Read/Write Files from Disk').item.json.fileName }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -592,
+        672
+      ],
+      "id": "22b864a9-68a5-4454-915f-bfc2fef003b2",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "output": "empty"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        928,
+        1280
+      ],
+      "id": "c1ff0f3e-0019-465c-9ef0-c6d0b0faca35",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.text }}",
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"name\": {\n      \"type\": \"string\",\n      \"description\" : \"The name of the candidate from the resume.\"\n    },\n    \"email\": {\n      \"type\": \"string\",\n      \"description\" : \"The email of the candidate from the resume. (Example: mail@example.com) If not found use 'EmailNotFound'.\"\n    },\n    \"skills\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"tech_skills\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"string\"\n          },\n          \"description\" : \"List only technology skills or programing languages skill found in the resume (example: Java, HVAC, Docker, etc.).\"\n        },\n        \"soft_skills\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"string\"\n          },\n          \"description\" : \"List soft skills, people skills. personal skills and management skills found in the resume.\"\n        }\n      }\n    },\n    \"years_experience\": {\n      \"type\": \"number\",\n      \"description\" : \"Calculate the total work years from the resume as an integer number. NO DECIMALS! Today we are in 2020\"\n    }\n  },\n  \"required\": [\"name\", \"years_experience\"],\n  \"description\": \"Always respond with a JSON.\"\n}",
+        "options": {
+          "systemPromptTemplate": "You are an expert extraction algorithm.\nOnly extract relevant information from the text.\nIf you do not know the value of an attribute asked to extract, you may omit the attribute's value.\nEnsure that the data is properly formatted.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        -672,
+        1152
+      ],
+      "id": "6a0ad257-f2fa-4fd2-a0a6-009753e06ac4",
+      "name": "Information Extractor",
+      "retryOnFail": true,
+      "maxTries": 3
+    },
+    {
+      "parameters": {
+        "model": "hf.co/mradermacher/AF-NER-Ih-GGUF:Q4_K_M",
+        "options": {
+          "numCtx": 8192,
+          "format": "json"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -576,
+        1376
+      ],
+      "id": "76e8a486-7655-4251-9358-ea6f600e3998",
+      "name": "Ollama Chat Model2",
+      "credentials": {
+        "ollamaApi": {
+          "id": "xHuYe0MDGOs9IpBW",
+          "name": "Local Ollama service"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"name\": {\n      \"type\": \"string\",\n      \"description\": \"The name of the candidate from the resume\"\n    },\n    \"email\": {\n      \"type\": \"string\",\n      \"format\": \"email\",\n      \"description\": \"The email of the candidate from the resume. (example: mail@example.com)\"\n    },\n    \"skills\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"tech_skills\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"string\"\n          },\n          \"description\": \"List only technology skills or programing languages skill found in the resume (example: Java, HVAC, Docker, etc.). If you can not find skills just add 'none'\"\n        },\n        \"soft_skills\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"string\"\n          },\n          \"description\": \"List soft skills, people skills. personal skills and management skills found in the resume. If you can not find skills just add 'none'\"\n        }\n      },\n      \"additionalProperties\": false\n    },\n    \"years_experience\": {\n      \"type\": \"number\",\n      \"description\": \"Calculate the total work years from the resume. Asume present year is 2020.\"\n    }\n  },\n  \"required\": [\n    \"name\",\n    \"email\",\n    \"years_experience\"\n  ],\n  \"additionalProperties\": false,\n  \"description\": \"Always respond with a JSON.\",\n  \"$schema\": \"http://json-schema.org/draft-07/schema#\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -1760,
+        1728
+      ],
+      "id": "137bff67-1b83-41c8-acf0-78cec3d2521c",
+      "name": "Structured Output Parser"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "Chat Memory Manager1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Split multiple files in single executions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Resumes Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Token Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Chat Memory Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " Get File Contents": {
+      "main": [
+        [
+          {
+            "node": "Check if PDF is image only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        []
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": " Get File Contents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Form",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Metadata Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query1": {
+      "main": [
+        []
+      ]
+    },
+    "Resumes Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_vectorStore": [
+        []
+      ]
+    },
+    "Resumes Database": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Chat Memory Manager",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "Chat Memory Manager1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Memory Manager1": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Memory Manager": {
+      "main": [
+        []
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Metadata Extractor": {
+      "main": [
+        []
+      ]
+    },
+    "Check if PDF is image only": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Information Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete file from local storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split multiple files in single executions": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculator": {
+      "ai_tool": [
+        [
+          {
+            "node": "Metadata Extractor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete file from local storage": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Extractor": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Metadata Extractor",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "11742fb3-47b1-408d-8fe7-6abda8f3a00b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a66325a5a16f947fbd3c6979a4f8783ece50ba9dec680016d633073a0b7e59a0"
+  },
+  "id": "srOnR8PAY3u4RSwb",
+  "tags": []
+}
