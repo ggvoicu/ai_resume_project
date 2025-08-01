@@ -21,7 +21,7 @@
 
 ### Prerequisites
 
-- [Docker CE](https://www.docker.com/products/docker-desktop/) installed.
+- [Docker CE](https://docs.docker.com/engine/install/ubuntu/) installed.
 - [Ollama](https://ollama.com/) installed with the following models downloaded:
   - `ollama pull qwen3:8b`
   - `ollama pull bge-m3:latest`
