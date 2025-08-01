@@ -23,9 +23,9 @@
 
 - [Docker CE](https://www.docker.com/products/docker-desktop/) installed.
 - [Ollama](https://ollama.com/) installed with the following models downloaded:
-  - `qwen3:8b`
-  - `bge-m3:latest`
-  - `hf.co/mradermacher/AF-NER-Ih-GGUF:Q4_K_M`
+  - `ollama pull qwen3:8b`
+  - `ollama pull bge-m3:latest`
+  - `ollama pull hf.co/mradermacher/AF-NER-Ih-GGUF:Q4_K_M`
 
 ### Steps
 
