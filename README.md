@@ -11,6 +11,7 @@
 - **LLM Integration**: Leverage advanced models (e.g., `qwen3:8b`, `bge-m3:latest`, `hf.co/mradermacher/AF-NER-lh-GGUF:Q4_K_M`) for semantic understanding and skill extraction.
 - **Vector Store Search**: Use Qdrant for semantic search.
 - **PostgreSQL Search**: Use PostgreSQL for simple keyword-based queries.
+- **Nginx Server**: Pre-configured to serve PDF files directly from the LLM chat interface (no configuration required).
 - **Docker-Ready**: Easy deployment with Docker Compose.
 - **Modular Architecture**: Separates concerns between resume ingestion, LLM processing, and search.
 
@@ -93,7 +94,13 @@
 ```
 
 ---
+### 🌐 Nginx Server
 
+- The **Nginx server is pre-configured** and does not require any changes.
+- It is used to serve uploaded PDF files directly from the LLM chat interface.
+- No manual configuration is needed; it is automatically handled during the Docker setup.
+
+---
 ## 📌 Contributing
 
 - **Fork** the repository and make your changes.
