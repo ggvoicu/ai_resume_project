@@ -101,13 +101,6 @@
 - No manual configuration is needed; it is automatically handled during the Docker setup.
 
 ---
-## 📌 Contributing
-
-- **Fork** the repository and make your changes.
-- **Submit a Pull Request** with a clear description of your changes.
-- **Code Quality**: Ensure tests pass and follow PEP8 guidelines.
-
----
 
 ## 📄 License
 
@@ -126,6 +119,7 @@ This project is licensed under the **GPL-3.0**. See the [LICENSE](LICENSE) file 
 
 - Enable efficient resume processing and semantic search for HR and recruitment tools.
 - Provide a scalable and modular architecture for future extensions.
+- Resume database taken from [huggingface](https://huggingface.co/datasets/Mehyaar/Annotated_NER_PDF_Resumes).
 
 ---
 
